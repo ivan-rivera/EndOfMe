@@ -1,0 +1,123 @@
+---
+title: "Insomniac's Diary"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: simplex
+    favicon: sleep_favicon.png
+    orientation: row
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+# todo:
+# - update all colours and stuff
+library(flexdashboard)
+library(tidyverse)
+library(wrapr)
+library(magrittr)
+library(ggpubr)
+library(googlesheets)
+library(lubridate)
+library(DT)
+
+project_path <- "/Users/ivan/OneDrive/Ivan/dev/projects/EndOfMe/project/etl/"
+for(f in c("settings.R","utils.R", "data.R", "display.R")) source(paste0(project_path, f))
+
+# get sleep data
+sleep_collection <- retrieve_sleep_data() %>% process_sleep_data()
+```
+
+# About This Dashboard
+
+Row {.tabset}
+-----------------------------------------------------------------------
+
+### My Sad Story
+
+**TLDR**
+
+TBD
+
+**The long version**
+
+Until about the age of 27-28, I used to sleep like a child and I felt that nothing can ever disturb my slumber. Since about 28, my sleep has changed but only slightly -- I began to regularly get up at 5 am to use the bathroom, but then I would usually get back to bed and have no trouble falling asleep. These toilet trips never bothered me. One morning in mid February, 2019, not long before my 30th birthday, my life has changed. (expand)
+
+
+
+### Chart Notes
+
+TBD
+
+# Summary
+
+```{r summary, fig.width=12, fig.height=7.65}
+summary_plot(sleep_collection)
+```
+
+
+# A Closer Look
+Row {.tabset}
+-----------------------------------------------------------------------
+### Sleep Ratings
+```{r sleep_ratings, fig.width=12, fig.height=7.65}
+p_over_time <- rating_over_time(sleep_collection)
+p_damage <- damage_plot(sleep_collection)
+ggarrange(
+  p_over_time + rremove("x.text"), 
+  p_damage, 
+  ncol=1, 
+  heights=c(7,5), 
+  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  align="v"
+)
+```
+
+### Sleep Quality
+```{r sleep_quality, fig.width=12, fig.height=7.65}
+p_hours_of_sleep <- hours_of_sleep(sleep_collection)
+p_hourly <- hourly_plot(sleep_collection)
+indicator_plot <- nightly_indicator_plot(sleep_collection)
+ggarrange(
+  p_hours_of_sleep + rremove("x.text"), 
+  p_hourly + rremove("x.text"), 
+  indicator_plot + rremove("legend"),
+  ncol=1, 
+  heights=c(5,5,4), 
+  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  align="v"
+)
+
+
+```
+
+### Bed Times
+```{r bed_times, fig.width=12, fig.height=7.65}
+p_sleep_hours <- sleep_hours(sleep_collection)
+p_extra_stats <- falling_asleep_and_staying_awake(sleep_collection)
+ggarrange(
+  p_sleep_hours + rremove("x.text"), 
+  p_extra_stats,
+  ncol=1, 
+  heights=c(5,7), 
+  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  align="v"
+)
+```
+
+
+# Analytics
+
+
+- create tabsets
+- relationship between rating and sleep hours
+- model performance (R2, AUC, correlation of actual vs predicted)
+- most predictive variables (coefficients or importance)
+- prediction for tomorrow (rating or good/bad)
+- later: compare with my guessed predictions
+
+# Data
+
+```{r data, echo=FALSE}
+display_data(sleep_collection)
+```
+
