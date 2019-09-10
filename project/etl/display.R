@@ -464,7 +464,10 @@ model_performance_plot <- function(model_results){
     theme(axis.text.x = element_text(angle=0)) +
     ggtitle(
       "Model Performance",
-      subtitle = sprintf("Predictions are made for %s",model_results$predictions$prediction_date[1])
+      subtitle = sprintf(
+        "Predictions are made for %s",
+        model_results$predictions$prediction_date[1] + 1 # +1 because we are predicting _next
+      )
     )
   p
 }

@@ -152,7 +152,7 @@ Row {.tabset}
 ### Sleep Rating vs Hours of Sleep
 
 ```{r rating_v_hours, fig.width=12, fig.height=7.65}
-plot_hours_v_rating_relation(sleep_collection)
+plot_hours_v_rating_relation(sleep_collection) + theme(plot.margin = unit(c(0.25,0.5,1,0.75), "cm"))
 ```
 
 ### Predicting Tomorrow
