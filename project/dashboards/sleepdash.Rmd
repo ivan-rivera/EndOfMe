@@ -2,29 +2,42 @@
 title: "Insomniac's Diary"
 output: 
   flexdashboard::flex_dashboard:
-    theme: simplex
-    favicon: sleep_favicon.png
+    theme: lumen
+    css: styles.css
+    favicon: sleep_favicon4.png
     orientation: row
     vertical_layout: fill
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
-# todo:
-# - update all colours and stuff
+# useful color links:
+# https://paletton.com/#uid=70s0u0kw0oZmFvHtFuTBLkrKnf8
+# https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/
+# https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html
+# http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
 library(flexdashboard)
 library(tidyverse)
-library(wrapr)
 library(magrittr)
-library(ggpubr)
+library(cowplot)
 library(googlesheets)
 library(lubridate)
 library(DT)
 
-project_path <- "/Users/ivan/OneDrive/Ivan/dev/projects/EndOfMe/project/etl/"
-for(f in c("settings.R","utils.R", "data.R", "display.R")) source(paste0(project_path, f))
+project_path <- "/Users/ivan/OneDrive/Ivan/dev/projects/EndOfMe/project"
+for(f in c("settings.R","utils.R", "data.R", "model.R", "display.R")){
+  source(paste0(project_path,"/etl/", f))
+}
 
-# get sleep data
-sleep_collection <- retrieve_sleep_data() %>% process_sleep_data()
+# theme extension
+joined_plot_theme <- theme(
+  plot.background = element_rect(
+    fill=custom_color_palette[["primary"]][5], 
+    color=NA
+  )
+)
+
+sleep_collection <- retrieve_sleep_data() %>% process_sleep_data() # get sleep data
+model_results <- generate_predictions(sleep_collection) # train models and score data
 ```
 
 # About This Dashboard
@@ -32,21 +45,49 @@ sleep_collection <- retrieve_sleep_data() %>% process_sleep_data()
 Row {.tabset}
 -----------------------------------------------------------------------
 
-### My Sad Story
+### My Story
 
 **TLDR**
 
-TBD
+Since mid February 2019 I've been suffering from insomnia. I've seen multiple doctors about this, but no one has been able to help me so far. From about the end of July 2019 I've started keeping track of my sleep patterns hoping I'd be able to find something actionable there. I'm still collecting this information and hopefully one day this dashboard may prove useful to me.
 
-**The long version**
+**The Long Version**
 
-Until about the age of 27-28, I used to sleep like a child and I felt that nothing can ever disturb my slumber. Since about 28, my sleep has changed but only slightly -- I began to regularly get up at 5 am to use the bathroom, but then I would usually get back to bed and have no trouble falling asleep. These toilet trips never bothered me. One morning in mid February, 2019, not long before my 30th birthday, my life has changed. (expand)
+Until about the age of 27-28, I used to sleep like a child and I felt that nothing can ever disturb my slumber. Since about 28, my sleep has changed but only slightly -- I began to regularly get up at 5 am to use the bathroom, but then I would usually get back to bed and have no trouble falling asleep. These toilet trips never bothered me. One morning in mid February, 2019, not long before my 30th birthday, I was unable to get back to sleep after my regular bathroom visit. This went on for a few weeks until one evening I went to bed late at night and to my horror I was wide awake by 3 am. From that point, I began to regularly wake up between 12 and 4 am. My nights usually look like this now: 
+
+  * Every night I wake up in the middle of the night
+  * The first time I wake up during the night I tend to use the bathroom, having said that I rarely feel like I have a lot in the tank
+  * If I wake up to use the bathroom for the first time before 2 am, I usually have no problems getting back to sleep after visiting the bathroom
+  * Regardless of whether I had woken up earlier or not, I tend to wake up between 3-4 am for no apparent reason
+  * When I wake up between 3-4 am, I tend to stay wide awake for anywhere between 30 mins to 2 hours (sometimes I don't manage to get back to sleep at all)
+  * If I'm wide awake in my bed, I'm usually too tired to do anything (e.g. pick up a book to read) so I tend to stay in bed with my eyes closed
+  * If after waking up between 3-4 am I manage to fall asleep, my sleep tends to be of poor quality -- either shallow, or I just tend to briefly wake again up every hour or so
+  
+When I first realized that I have a nasty case of insomnia that isn't going to go away by itself, I was genuinely stressed out and I feel that my mental state made this situation worse. However, over the next few months I went through a few periods of recovery one of which lasted for a week and the other a whole 3 weeks. These recovery periods as well as the subsequent relapses did not at all reflect changes in my state of mind and I concluded that the problem must have a physiological explanation which relieved some of the stress I was going through. When I discussed this problem with my doctors, I was referred to a pulmonologist (lung specialist) who gave me some gadgets for me to take a sleep test at home. I did this test during one of those periods of recovery so I didn't think it would show much, however apparently the test showed that I might have a minor case of sleep apnea and I was referred to take a sleep lab for a more comprehensive analysis.
+  
 
 
 
 ### Chart Notes
 
-TBD
+  * Summary
+    * Summary Statistics: a high level overview of the key metrics (from my point of view)
+  * A Closer Look Charts
+    * Sleep Ratings
+      - How I Rated Each Night: this is how I rated each night. Note that a normal person's 5/10 rating is probably my 8/10 rating
+      - Damaged Absorbed: I find that I can manage a single terrible night, but after a few of these nights, damage really begins to accumulate. This plot is meant to represent how I feel not just in the context of last night but in the context of recent history
+    * Sleep Quality
+      - How Much Sleep I'm Getting: This plot attempts to quantify how many hours of sleep I'm actually getting. I find that sleep ratings are a better representation of sleep quality than pure hours because not every hour of sleep is the same. I also find that getting a long uninterrupted chunk of sleep usually translates into a higher rating. Also note that some period of my sleep are classified as "shallow" -- this is when I feel like I'm not fully awake but at the same time I'm not fully out either.
+      - Each Night Dissected By Hour: This plot attempts to visualize each night by hour and reconstruct each awakening event, each bathroom visit, etc. Whenever I wake up, I would look at the clock and make a mental note of time. In the mornings I record these times in my diary.
+      - Nightly Observations: In addition to the hourly plot (discussed above), I also take notes of a few other things such as whether or not I've been experiencing palpitations (I tend to get those every now and again), whether I feel a sense of panic (sometimes I can get nervous that I'm going to be a wreck tomorrow) and the state of my nose (I've been having trouble with my nose).
+    * Bed Times
+      * Times I Go To And Get Up From Bed: this is version of the hourly plot from the previous tab, but the attention is diverted to the times I go to bed and wake up each night/day
+      * Falling Asleep And Staying Awake: A few additional stats on how much time I spend awake in the middle of the night and how long it takes me to fall asleep
+  * Analytics:
+    * Sleep Rating vs Hours of Sleep: as I suspected, it appears that sleep rating and hours of sleep are not that strongly correlated and this plot shows it
+    * Predicting Tomorrow
+      - Model Performance: I've tried fitting 2 models, 1 for ratings and 1 for hours of sleep, this plot shows how they perform in term of RMSE and correlations between actual and predicted values. For now, these models are terrible as there is just not a lot of data, but hopefully they will improve over time
+      - Variable Importance: This plot shows how important each of the variables for each model. The importance scores are relative to the most important variable in each model.
 
 # Summary
 
@@ -62,14 +103,14 @@ Row {.tabset}
 ```{r sleep_ratings, fig.width=12, fig.height=7.65}
 p_over_time <- rating_over_time(sleep_collection)
 p_damage <- damage_plot(sleep_collection)
-ggarrange(
-  p_over_time + rremove("x.text"), 
+g <- plot_grid(
+  p_over_time + theme(axis.text.x = element_blank()),
   p_damage, 
   ncol=1, 
-  heights=c(7,5), 
-  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  rel_heights=c(7,5), 
   align="v"
 )
+ggdraw(g + joined_plot_theme)
 ```
 
 ### Sleep Quality
@@ -77,43 +118,56 @@ ggarrange(
 p_hours_of_sleep <- hours_of_sleep(sleep_collection)
 p_hourly <- hourly_plot(sleep_collection)
 indicator_plot <- nightly_indicator_plot(sleep_collection)
-ggarrange(
-  p_hours_of_sleep + rremove("x.text"), 
-  p_hourly + rremove("x.text"), 
-  indicator_plot + rremove("legend"),
+g <- plot_grid(
+  p_hours_of_sleep + theme(axis.text.x = element_blank()),
+  p_hourly + theme(axis.text.x = element_blank()),
+  indicator_plot + theme(legend.position = "none"),
   ncol=1, 
-  heights=c(5,5,4), 
-  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  rel_heights=c(4,6,4), 
   align="v"
 )
-
-
+ggdraw(g + joined_plot_theme)
 ```
 
 ### Bed Times
 ```{r bed_times, fig.width=12, fig.height=7.65}
 p_sleep_hours <- sleep_hours(sleep_collection)
 p_extra_stats <- falling_asleep_and_staying_awake(sleep_collection)
-ggarrange(
-  p_sleep_hours + rremove("x.text"), 
+g <- plot_grid(
+  p_sleep_hours + theme(axis.text.x = element_blank()),
   p_extra_stats,
   ncol=1, 
-  heights=c(5,7), 
-  label.x = sleep_collection[["sleep"]]$sleep_date, 
+  rel_heights=c(5,7), 
   align="v"
 )
+ggdraw(g + joined_plot_theme)
 ```
 
 
 # Analytics
 
+Row {.tabset}
+-----------------------------------------------------------------------
 
-- create tabsets
-- relationship between rating and sleep hours
-- model performance (R2, AUC, correlation of actual vs predicted)
-- most predictive variables (coefficients or importance)
-- prediction for tomorrow (rating or good/bad)
-- later: compare with my guessed predictions
+### Sleep Rating vs Hours of Sleep
+
+```{r rating_v_hours, fig.width=12, fig.height=7.65}
+plot_hours_v_rating_relation(sleep_collection)
+```
+
+### Predicting Tomorrow
+
+```{r models, fig.width=12, fig.height=7.65}
+p_cors <- model_performance_plot(model_results)
+p_vars <- variable_importance_plot(model_results)
+g <- plot_grid(
+  p_cors + theme(plot.margin = unit(c(0.25,0.5,0.5,8.74726), "cm")),
+  p_vars + theme(plot.margin = unit(c(0.25,0.5,0,0), "cm")),
+  ncol=1, 
+  rel_heights=c(7,5)
+)
+ggdraw(g + joined_plot_theme)
+```
 
 # Data
 

@@ -1,0 +1,33 @@
+* {
+  background-color: #022A0B !important;
+  color: #CF17D5 !important;
+  border-color: transparent !important;
+}
+
+
+.nav-tabs-custom > .nav-tabs > li > a {
+  color: #CF17D5 !important;
+}
+
+.nav-tabs-custom > .nav-tabs > li > a:hover {
+  font-weight:bold !important;
+}
+
+.navbar-inverse .navbar-nav > li > a {
+  color: #CF17D5 !important;
+}
+
+.navbar-brand {
+  color: #FFAB1A !important;
+  font-size: 14 !important;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover {
+  font-weight:bold !important;
+}
+
+
+.nav-tabs-custom > .nav-tabs > li.active {
+  border-top-color: #CF17D5 !important;
+}
+

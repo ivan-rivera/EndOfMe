@@ -1,0 +1,59 @@
+* {
+  background-color: #021F2E !important;
+  color: #1886C2 !important;
+  border-color: transparent !important;
+}
+
+
+.nav-tabs-custom > .nav-tabs > li > a {
+  color: #FF4813 !important;
+}
+
+.nav-tabs-custom > .nav-tabs > li > a:hover {
+  font-weight:bold !important;
+}
+
+.navbar-inverse .navbar-nav > li > a {
+  color: #1886C2 !important;
+}
+
+.navbar-brand {
+  color: #FFBF13 !important;
+  font-size: 14 !important;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover {
+  font-weight:bold !important;
+}
+
+
+.nav-tabs-custom > .nav-tabs > li.active {
+  border-top-color: #FF4813 !important;
+}
+
+a.paginate_button {
+    color: #FFBF13 !important;
+}
+
+
+.dataTables_wrapper 
+.dataTables_paginate 
+.paginate_button {
+    color: #1886C2 !important;
+}
+
+.dataTables_wrapper 
+.dataTables_paginate 
+.paginate_button.current {
+    color: #021F2E !important;
+    background: #1886C2 !important;
+    background-color: #1886C2 !important;
+}
+
+.dataTables_wrapper 
+.dataTables_paginate 
+.paginate_button:hover {
+    color: #021F2E !important;
+    background: #FF4813 !important;
+    background-color: #FFBF13 !important;
+}

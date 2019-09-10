@@ -9,11 +9,6 @@
 #' Convert linear time to a circular form revolving around midnight
 #'
 #' @param time_value a string in the format HH:MM:SS
-#'
-#' @return
-#' @export
-#'
-#' @examples
 roll_midnight <- function(time_value){
   time_value %>%
     na.omit %>%
@@ -23,14 +18,11 @@ roll_midnight <- function(time_value){
     }) 
 }
 
-average_time <- function(time_value){
-  time_value %>%
-    roll_midnight
-  mean %>% 
-    ifelse(./60^2 >=24, .-24*60^2, .) %>%
-    seconds_to_period
-}
 
+#' Reformat comma separated values
+#'
+#' @param df data frame
+#' @param var variable to process
 reformat_csv <- function(df, var){
   df %>%
     select(one_of(c("sleep_date", var))) %>%
@@ -44,6 +36,11 @@ reformat_csv <- function(df, var){
     na.omit()
 }
 
+#' Generate "from-to" segment data for hourly plots 
+#'
+#' @param df data frame with waking events
+#' @param anchor_cols column to join via a segment
+#' @param event_type label of the segment
 generate_from_to_segments <- function(df, anchor_cols, event_type){
   date_col <- "sleep_date"
   df %>% 
@@ -64,6 +61,9 @@ generate_average_over_n_days <- function(processed_sleep_data, n){
 }
 
 
+#' Scale time (HH:MM) on a plot
+#'
+#' @param z time value in seconds
 time_scaler <- function(z){
   converted_z <- z/60^2
   stringr::str_pad(
@@ -82,7 +82,22 @@ time_scaler <- function(z){
     sep=":")
 }
 
+#' Facet Percent Formatter (in case a facet contains comma and percent values)
+#'
+#' @param z continuous value
+facet_percent_formatter <- function(z){
+  if(max(z, na.rm=TRUE) <= 1){
+    scales::percent(z)
+  } else{
+    scales::comma(z)
+  }
+}
 
+
+#' Extract data for summary stat generation
+#' this is used when we want to calculate the same stats for multiple time segments
+#' @param sleep_data sleep data
+#' @param agg_function aggregation function to perform
 summary_extraction <- function(sleep_data, agg_function){
   
   # fetch date boundaries
@@ -97,7 +112,7 @@ summary_extraction <- function(sleep_data, agg_function){
         filter_a._all_recorded_history = TRUE,
         filter_d._yesterday = date_var == max(date_var),
         filter_c._most_recent_n_days = date_var > most_recent_date_break,
-        filter_d._previous_n_days = (date_var > previous_date_break) & 
+        filter_b._previous_n_days = (date_var > previous_date_break) & 
           (date_var <= most_recent_date_break)
       )
   }

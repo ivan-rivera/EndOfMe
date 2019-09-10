@@ -3,22 +3,19 @@
 # ================================
 
 
-# fetch data
+#' Fetch data from Google Sheets
 retrieve_sleep_data <- function(){
   gs_auth() # authenticate
   gs_title(target_spreadsheet) %>% 
-    gs_read(ws=target_worksheet)
-  
+    gs_read(ws=target_worksheet) %>%
+    filter(!is.na(`sleep rating`))
 }
 
-# process data
+
+#' Compile datasets for plotting and modelling
+#'
+#' @param sleep_df data from Google Sheets
 process_sleep_data <- function(sleep_df){
-  
-  # ratings boundaries
-  rating_boundaries <- list(
-    "min" = min(sleep_df$`sleep rating`, na.rm=TRUE),
-    "max" = max(sleep_df$`sleep rating`, na.rm=TRUE)
-  )
   
   processed_sleep_data <- prepare_sleep_data(sleep_df)
   events <- collect_events_log(processed_sleep_data)
@@ -28,19 +25,20 @@ process_sleep_data <- function(sleep_df){
   wakings <- compile_awakenings_data(processed_sleep_data)
   sleep_stats <- get_sleep_statistics(wakings)
   summary_data <- get_summary_data(processed_sleep_data, sleep_stats, annotations)
+  model_data <- get_model_data(processed_sleep_data, sleep_stats, nightly_indicators, events)
+  model_vars <- get_model_vars(model_data)
   
   summary_limits_data <- tribble(
-    ~variable, ~limit, ~lower_bound, ~upper_bound,
-    "average hours asleep", 8, 3, 6,
-    "average longest sleep segment", 6, 1, 3,
-    "average pills used", 1, 0.25, 0.75,
-    "average sleep rating", 7, 3, 6,
-    "average mins to fall asleep", 20, 30, 60,
-    "percentage of time asleep", 0.9, 0.5, 0.75
+    ~variable, ~limit, ~lower_bound, ~upper_bound, ~shadow_limit,
+    "average hours asleep", 8, 3, 6, 9,
+    "average longest sleep segment", 6, 1, 3, 8,
+    "average pills used", 1, 0.25, 0.75, 1.1,
+    "average sleep rating", 7, 3, 6, 7.5, 
+    "average mins to fall asleep", 20, 30, 60, 80,
+    "percentage of time asleep", 0.9, 0.5, 0.75, 1
   )
   
   list(
-    "rating boundaries" = rating_boundaries,
     "weekend boundaries" = weekend_boundaries,
     "sleep" = processed_sleep_data,
     "wakings" = wakings,
@@ -48,6 +46,10 @@ process_sleep_data <- function(sleep_df){
     "nightly indicators" = nightly_indicators,
     "events" = events,
     "sleep stats" = sleep_stats,
+    "modelling" = list(
+      "data" = model_data,
+      "variables" = model_vars
+    ),
     "summary" = list(
       "data" = summary_data,
       "limits" = summary_limits_data
@@ -57,6 +59,7 @@ process_sleep_data <- function(sleep_df){
 }
 
 
+#' Initial preprocessing steps
 prepare_sleep_data <- function(sleep_df){
   sleep_df %>% 
     set_colnames(
@@ -68,6 +71,7 @@ prepare_sleep_data <- function(sleep_df){
 }
 
 
+#' Extract event log from Google Sheets
 collect_events_log <- function(sleep_df){
   events_df <- sleep_df %>% 
     select(sleep_date, sleep_rating, special) %>%
@@ -75,6 +79,7 @@ collect_events_log <- function(sleep_df){
 }
 
 
+#' Compile hourly annotation data
 collect_annotations <- function(sleep_df){
   
   toilet_visits <- sleep_df %>% 
@@ -97,12 +102,13 @@ collect_annotations <- function(sleep_df){
 }
 
 
+#' Compile nightly indicators (nose state, panic, etc)
 compile_nightly_indicators <- function(sleep_df){
   nightly_indicators <- sleep_df %>%
     transmute(
       sleep_date = sleep_date, 
-      bedtime_palpatations = ifelse(bedtime_palpatations == "yes", 2, 0), 
-      midnight_palpatations = ifelse(midnight_palpatations == "yes", 2, 0),
+      bedtime_palpitations = ifelse(bedtime_palpitations == "yes", 2, 0), 
+      midnight_palpitations = ifelse(midnight_palpitations == "yes", 2, 0),
       panic = as.numeric(factor(panic, c("no", "nearly", "yes")))-1,
       otrivin = 2 * as.numeric(grepl("otrivin", nose_state)),
       nose_state = as.numeric(factor(
@@ -112,10 +118,11 @@ compile_nightly_indicators <- function(sleep_df){
     ) %>% gather(variable, value, -sleep_date) %>%
     mutate(
       variable = gsub("_", " ", variable),
-      variable = gsub("palpatations", "palp.", variable)
+      variable = gsub("palpitations", "palp.", variable)
     )
 }
 
+#' Create weekend boundary data
 generate_weekend_boundaries <- function(sleep_df){
   sleep_df %>%
     select(sleep_date) %>%
@@ -149,6 +156,7 @@ generate_weekend_boundaries <- function(sleep_df){
 }
 
 
+#' Fetch awakening times and statuses
 compile_awakenings_data <- function(sleep_df){
   sleep_df %>% 
     reformat_csv("waking") %>%
@@ -175,6 +183,7 @@ compile_awakenings_data <- function(sleep_df){
 }
 
 
+#' generate sleep stats
 get_sleep_statistics <- function(wakings_df){
   
   main_attributes <- wakings_df %>% 
@@ -248,6 +257,7 @@ get_sleep_statistics <- function(wakings_df){
   
 }
 
+#' Generate summary data for the main plot
 get_summary_data <- function(sleep_data, sleep_stats, annotations){
   
   sleep_ratings <- summary_extraction(
@@ -302,4 +312,71 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations){
     gather(variable, value, -category) %>%
     mutate(variable = gsub("_"," ", variable))
   
+}
+
+#' create required data for modelling
+get_model_data <- function(sleep_data, sleep_stats, indicators, events){
+  sleep_data %>%
+    transmute(
+      # gonna ignore sleeping pill intake for now
+      # I take then rarely, so there is little data and
+      # there is also a bias involved -- if I take them
+      # in the middle of the night, things are going bad
+      # and even though they might improve my sleep a little
+      # just by looking at their effect on sleep ratings
+      # we might assume the opposite only because I take them
+      # on bad nights only. Furthermore, I want to be able
+      # to predict my rating before going to bed, whereas
+      # when I wake up in the middle of the night and I feel
+      # like I need a pill, I can already tell that the rating
+      # is going to be low. If I start taking them regularly
+      # then I will attempt to introduce a break point into the data
+      sleep_date = sleep_date,
+      sleep_rating = sleep_rating,
+      temperature = temperature,
+      alcohol_std = alcohol_std
+    ) %>%
+    left_join(
+      sleep_stats %>% 
+        select(-n_day_average) %>%
+        mutate(variable = gsub("\\s+", "_", variable)) %>% 
+        spread(variable, value),
+      by="sleep_date"
+    ) %>%
+    left_join(
+      indicators %>% 
+        mutate(
+          variable = gsub("\\s+", "_", variable),
+          variable = gsub("\\.", "", variable)
+        ) %>% spread(variable, value),
+      by="sleep_date"
+    ) %>%
+    left_join(
+      events %>%
+        transmute(
+          sleep_date = sleep_date,
+          event = 1
+        ),
+      by="sleep_date"
+    ) %>% 
+    replace(., is.na(.), 0) %>%
+    mutate(
+      event = replace_na(event, 0),
+      sleep_rating_day_before = lag(sleep_rating),
+      time_asleep_day_before = lag(time_asleep),
+      sleep_rating_next = lead(sleep_rating),
+      time_asleep_next = lead(time_asleep)
+    ) %>% filter(
+      !is.na(time_asleep_day_before),
+      !is.na(sleep_rating_day_before)
+    )
+}
+
+#' a small function that isolates predictor variables
+get_model_vars <- function(df){
+  list(
+    # everything that isn't in the below list is a predictor
+    "id" = c("sleep_date"),
+    "exclusions" = df %>% select(ends_with("next")) %>% colnames
+  )
 }
