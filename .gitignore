@@ -7,4 +7,4 @@
 .DS_Store
 .Rhistory
 .httr-oauth
-project/dashboards/reconnect/*
+project/dashboards/rsconnect/*
