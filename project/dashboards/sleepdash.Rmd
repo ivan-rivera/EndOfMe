@@ -63,9 +63,9 @@ Until about the age of 27-28, I used to sleep like a child and I felt that nothi
   * If I'm wide awake in my bed, I'm usually too tired to do anything (e.g. pick up a book to read) so I tend to stay in bed with my eyes closed
   * If after waking up between 3-4 am I manage to fall asleep, my sleep tends to be of poor quality -- either shallow, or I just tend to briefly wake again up every hour or so
   
-When I first realized that I have a nasty case of insomnia that isn't going to go away by itself, I was genuinely stressed out and I feel that my mental state made this situation worse. However, over the next few months I went through a few periods of recovery one of which lasted for a week and the other a whole 3 weeks. These recovery periods as well as the subsequent relapses did not at all reflect changes in my state of mind and I concluded that the problem must have a physiological explanation which relieved some of the stress I was going through. When I discussed this problem with my doctors, I was referred to a pulmonologist (lung specialist) who gave me some gadgets for me to take a sleep test at home. I did this test during one of those periods of recovery so I didn't think it would show much, however apparently the test showed that I might have a minor case of sleep apnea and I was referred to take a sleep lab for a more comprehensive analysis.
-  
+When I first realized that I have a nasty case of insomnia that isn't going to go away by itself, I was genuinely stressed out and I feel that my mental state made this situation worse. However, over the next few months I went through a few periods of recovery one of which lasted for a week and the other a whole 3 weeks. These recovery periods as well as the subsequent relapses did not at all reflect changes in my state of mind and I concluded that the problem must have a physiological explanation which relieved some of the stress I was going through. When I discussed this problem with my doctors, I was referred to a pulmonologist (lung specialist) who gave me some gadgets for me to take a sleep test at home. I did this test during one of those periods of recovery so I didn't think it would show much, however apparently the test showed that I might have a minor case of sleep apnea and I was referred to take a sleep lab for a more comprehensive analysis. That's where this dashboard was created. 
 
+One one of the 2 nights I spent in the lab was quite poor and I thought that it should give the doctors something to look at. To my astonishment, the doctors concluded that there is nothing physically wrong with me and that in fact my perception of shallow sleep is rather pessimistic. While I thought that I spent a decent chunk of one night in a state of shallow sleep (to elaborate, I felt like I was just lying down with my eyes closed and I could get up at any point), the doctors pointed out that I actually passed out into deep sleep during some of that time though they did concede that I did indeed spent a long time in phase 1 (shallow sleep from a scientific point of view) yet it was not unhealthy from their point of view. And indeed I did feel reasonably well during the day after that night, so I started tracking my daytime energy levels too. I explained to the doctors that most of my nights I either stay awake in the middle of the night for far too long or I just get restless, interrupted sleep and I feel broken during the day. The doctors claimed to have seen cases like mine before and suggested that I should try to ride it out and how that it'll go away in a year or two.
 
 
 ### Chart Notes
@@ -74,20 +74,20 @@ When I first realized that I have a nasty case of insomnia that isn't going to g
     * Summary Statistics: a high level overview of the key metrics (from my point of view)
   * A Closer Look Charts
     * Sleep Ratings
-      - How I Rated Each Night: this is how I rated each night. Note that a normal person's 5/10 rating is probably my 8/10 rating
-      - Damaged Absorbed: I find that I can manage a single terrible night, but after a few of these nights, damage really begins to accumulate. This plot is meant to represent how I feel not just in the context of last night but in the context of recent history
+      - **How I Rated Each Night**: this is how I rated each night. Note that a normal person's 5/10 rating is probably my 8/10 rating
+      - **Damaged Absorbed**: I find that I can manage a single terrible night, but after a few of these nights, damage really begins to accumulate. This plot is meant to represent how I feel not just in the context of last night but in the context of recent history
     * Sleep Quality
-      - How Much Sleep I'm Getting: This plot attempts to quantify how many hours of sleep I'm actually getting. I find that sleep ratings are a better representation of sleep quality than pure hours because not every hour of sleep is the same. I also find that getting a long uninterrupted chunk of sleep usually translates into a higher rating. Also note that some period of my sleep are classified as "shallow" -- this is when I feel like I'm not fully awake but at the same time I'm not fully out either.
-      - Each Night Dissected By Hour: This plot attempts to visualize each night by hour and reconstruct each awakening event, each bathroom visit, etc. Whenever I wake up, I would look at the clock and make a mental note of time. In the mornings I record these times in my diary.
-      - Nightly Observations: In addition to the hourly plot (discussed above), I also take notes of a few other things such as whether or not I've been experiencing palpitations (I tend to get those every now and again), whether I feel a sense of panic (sometimes I can get nervous that I'm going to be a wreck tomorrow) and the state of my nose (I've been having trouble with my nose).
+      - **How Much Sleep I'm Getting**: This plot attempts to quantify how many hours of sleep I'm actually getting, but do note that these values are very imprecise. I find that sleep ratings are a better representation of sleep quality than pure hours because not every hour of sleep is the same. I also find that getting a long uninterrupted chunk of sleep usually translates into a higher rating. Also note that some period of my sleep are classified as "shallow" -- this is when I feel like I'm not fully awake but at the same time I'm not fully out either. Shallow sleep (specifically my definition of it) is a strange phase where I feel like I'm awake, yet I don't have full control of my thought process and even more strangely, according to sleep tests that I've done, I was even going through a deep dream phase at the time I classified as "shallow sleep"
+      - **Each Night Dissected By Hour**: This plot attempts to visualize each night by hour and reconstruct each awakening event, each bathroom visit, etc. Whenever I wake up, I would look at the clock and make a mental note of time. In the mornings I record these times in my diary.
+      - **Nightly Observations**: In addition to the hourly plot (discussed above), I also take notes of a few other things such as whether or not I've been experiencing palpitations (I tend to get those every now and again), whether I feel a sense of panic (sometimes I can get nervous that I'm going to be a wreck tomorrow) and the state of my nose (I've been having trouble with my nose).
     * Bed Times
-      * Times I Go To And Get Up From Bed: this is version of the hourly plot from the previous tab, but the attention is diverted to the times I go to bed and wake up each night/day
+      * **Times I Go To And Get Up From Bed**: this is version of the hourly plot from the previous tab, but the attention is diverted to the times I go to bed and wake up each night/day
       * Falling Asleep And Staying Awake: A few additional stats on how much time I spend awake in the middle of the night and how long it takes me to fall asleep
   * Analytics:
-    * Sleep Rating vs Hours of Sleep: as I suspected, it appears that sleep rating and hours of sleep are not that strongly correlated and this plot shows it
+    * **Sleep Rating vs Hours of Sleep**: as I suspected, it appears that sleep rating and hours of sleep are not that strongly correlated and this plot shows it
     * Predicting Tomorrow
-      - Model Performance: I've tried fitting 2 models, 1 for ratings and 1 for hours of sleep, this plot shows how they perform in term of RMSE and correlations between actual and predicted values. For now, these models are terrible as there is just not a lot of data, but hopefully they will improve over time
-      - Variable Importance: This plot shows how important each of the variables for each model. The importance scores are relative to the most important variable in each model.
+      - **Model Performance**: I've tried fitting 2 models, 1 for ratings and 1 for hours of sleep, this plot shows how they perform in term of RMSE and correlations between actual and predicted values. For now, these models are terrible as there is just not a lot of data, but hopefully they will improve over time
+      - **Variable Importance**: This plot shows how important each of the variables for each model. The importance scores are relative to the most important variable in each model.
 
 # Summary
 
@@ -104,7 +104,7 @@ Row {.tabset}
 p_over_time <- rating_over_time(sleep_collection)
 p_damage <- damage_plot(sleep_collection)
 g <- plot_grid(
-  p_over_time + theme(axis.text.x = element_blank()),
+  p_over_time,
   p_damage, 
   ncol=1, 
   rel_heights=c(7,5), 
@@ -161,7 +161,7 @@ plot_hours_v_rating_relation(sleep_collection) + theme(plot.margin = unit(c(0.25
 p_cors <- model_performance_plot(model_results)
 p_vars <- variable_importance_plot(model_results)
 g <- plot_grid(
-  p_cors + theme(plot.margin = unit(c(0.25,0.5,0.5,8.74726), "cm")),
+  p_cors + theme(plot.margin = unit(c(0.25,0.5,0.5,4.95), "cm")),
   p_vars + theme(plot.margin = unit(c(0.25,0.5,0,0), "cm")),
   ncol=1, 
   rel_heights=c(7,5)

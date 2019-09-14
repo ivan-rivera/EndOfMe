@@ -8,7 +8,7 @@
 
 
 target_spreadsheet <- "mydb"
-target_worksheet <- "Sleep Diary (new)"
+target_worksheet <- "Sleep Diary"
 
 
 # PARAMETERS ------------------------------------------
@@ -67,21 +67,22 @@ custom_theme <-
     text = element_text(family="Source Sans Pro"),
     axis.ticks = element_line(color = custom_color_palette[["primary"]][1]),
     axis.text = element_text(size=11, color=custom_color_palette[["primary"]][1]),
-    axis.text.x = element_text(angle=45),
+    #axis.text.x = element_text(angle=45),
     axis.title = element_text(size=14, color=custom_color_palette[["primary"]][1]),
     legend.key = element_rect(fill = "transparent", color="transparent"),
     legend.background = element_rect(fill = "transparent", color="transparent"),
     legend.text = element_text(size=12,color=custom_color_palette[["primary"]][1]),
     plot.margin = unit(c(0.25,0.5,0,0.75), "cm"),
     plot.title = element_text(
-      family="Open Sans", 
-      size=18, 
+      #family="Source Sans Pro", 
+      face="bold",
+      size=16, 
       color=custom_color_palette[["primary"]][1]
     ),
     plot.subtitle = element_text(
-      family="Open Sans", 
-      size=16,
-      color=custom_color_palette[["primary"]][3]
+      #family="Open Sans", 
+      size=13,
+      color=custom_color_palette[["secondary2"]][2]
     ),
     strip.text = element_text(color=custom_color_palette[["primary"]][1], size=12),
     strip.background = element_rect(

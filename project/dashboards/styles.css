@@ -2,6 +2,7 @@
   background-color: #021F2E !important;
   color: #1886C2 !important;
   border-color: transparent !important;
+  font-family: "Source Sans Pro";
 }
 
 
@@ -26,13 +27,17 @@
   font-weight:bold !important;
 }
 
+.navbar-inverse .navbar-nav > li.active {
+  font-weight:bold !important;
+}
+
 
 .nav-tabs-custom > .nav-tabs > li.active {
   border-top-color: #FF4813 !important;
 }
 
 a.paginate_button {
-    color: #FFBF13 !important;
+    color: #1886C2 !important;
 }
 
 
