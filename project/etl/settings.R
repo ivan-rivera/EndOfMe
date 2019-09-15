@@ -50,8 +50,8 @@ custom_color_palette <- list(
 
 good_bad_colours <- list(
   "good"=custom_color_palette[["primary"]][2],
-  "average"=custom_color_palette[["secondary1"]][2],
-  "bad"=custom_color_palette[["secondary2"]][2]
+  "average"=custom_color_palette[["secondary1"]][3],
+  "bad"=custom_color_palette[["secondary2"]][3]
 )
 
 

@@ -192,12 +192,12 @@ hourly_plot <- function(sleep_collection){
       expand=expand_settings, 
       breaks=seq(23*60^2, length.out=6, by=2*60^2)
     ) + 
-    scale_shape_manual("", values=c("pills"=12, "toilet"=6)) +
+    scale_shape_manual("", values=c("pills"=12, "toilet"=2)) +
     scale_colour_manual("", values=c(
-      "asleep"=custom_color_palette[["primary"]][3], 
-      "falling asleep"=custom_color_palette[["primary"]][4], 
+      "asleep"=custom_color_palette[["primary"]][4], 
+      "falling asleep"=custom_color_palette[["secondary1"]][3], 
       "awake"=custom_color_palette[["secondary2"]][3], 
-      "shallow sleep"=custom_color_palette[["secondary2"]][4]
+      "shallow sleep"=custom_color_palette[["primary"]][2]
     )) +
     custom_theme +
     theme(
@@ -257,14 +257,14 @@ hours_of_sleep <- function(sleep_collection){
     geom_hline(yintercept = 480, color=custom_color_palette[["secondary1"]][1]) + 
     geom_line(
       aes(y=n_day_average), 
-      color=custom_color_palette[["primary"]][1], 
+      color=custom_color_palette[["primary"]][2], 
       linetype="dashed",
       size=0.5,
       data=sleep_collection[["sleep stats"]] %>% filter(variable == "time asleep")
     ) + 
     geom_line(
       aes(y=n_day_average), 
-      color=custom_color_palette[["secondary2"]][2], 
+      color=custom_color_palette[["secondary2"]][1], 
       linetype="dashed",
       size=0.5,
       data=sleep_collection[["sleep stats"]] %>% 
@@ -289,7 +289,7 @@ hours_of_sleep <- function(sleep_collection){
     ) +
     scale_fill_manual("", values=c(
       "time asleep" = custom_color_palette[["primary"]][3], 
-      "longest sleep segment" = custom_color_palette[["secondary2"]][4]
+      "longest sleep segment" = custom_color_palette[["secondary2"]][3]
     )) +
     custom_theme +
     theme(
