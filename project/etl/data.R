@@ -24,18 +24,21 @@ process_sleep_data <- function(sleep_df){
   weekend_boundaries <- generate_weekend_boundaries(processed_sleep_data)
   wakings <- compile_awakenings_data(processed_sleep_data)
   sleep_stats <- get_sleep_statistics(wakings)
-  summary_data <- get_summary_data(processed_sleep_data, sleep_stats, annotations)
+  sleep_efficiency <- calculate_sleep_efficiency(sleep_stats)
+  summary_data <- get_summary_data(processed_sleep_data, sleep_stats, annotations, sleep_efficiency)
   model_data <- get_model_data(processed_sleep_data, sleep_stats, nightly_indicators, events)
   model_vars <- get_model_vars(model_data)
   
   summary_limits_data <- tribble(
     ~variable, ~limit, ~lower_bound, ~upper_bound, ~shadow_limit,
-    "average hours asleep", 8, 3, 6, 9,
-    "average longest sleep segment", 6, 1, 3, 8,
-    "average pills used", 1, 0.25, 0.75, 1.1,
+    "average sleep efficiency", desired_sleep_efficiency, 0.5, 0.75, 1,
+    "average hours asleep", min_required_hours, 3, 6, 9,
+    "average longest sleep segment", min_required_hours, 1, 3, 8,
+    "average daytime energy", 6, 3, 5, 10,
+    #"average pills used", 1, 0.25, 0.75, 1.1,
     "average sleep rating", 7, 3, 6, 7.5, 
-    "average mins to fall asleep", 20, 30, 60, 80,
-    "percentage of time asleep", 0.9, 0.5, 0.75, 1
+    "average mins to fall asleep", 20, 30, 45, 60
+    #"percentage of time asleep", 0.9, 0.5, 0.75, 1.05
   )
   
   list(
@@ -162,7 +165,8 @@ compile_awakenings_data <- function(sleep_df){
     reformat_csv("waking") %>%
     mutate(
       event_type = ifelse(grepl("\\(SS\\)", value), "shallow sleep", "awake"),
-      value = gsub("\\s+|\\(SS\\)", "", value)
+      event_type = ifelse(grepl("\\(OOB\\)", value), "out of bed", event_type),
+      value = gsub("\\s+|\\((SS|OOB)\\)", "", value)
     ) %>%
     select(-variable) %>%
     na.omit() %>%
@@ -258,13 +262,14 @@ get_sleep_statistics <- function(wakings_df){
 }
 
 #' Generate summary data for the main plot
-get_summary_data <- function(sleep_data, sleep_stats, annotations){
+get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficiency){
   
   sleep_ratings <- summary_extraction(
     sleep_data,
     function(df){
       df %>% summarise(
-        average_sleep_rating = mean(sleep_rating)
+        average_sleep_rating = mean(sleep_rating),
+        average_daytime_energy = mean(energy_level, na.rm=TRUE)
       )
     }
   )
@@ -278,40 +283,67 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations){
       df %>% summarise(
         average_hours_asleep = mean(time_asleep)/60,
         average_mins_to_fall_asleep = mean(time_to_fall_asleep),
-        percentage_of_time_asleep = mean(time_asleep/(time_asleep+time_awake_in_the_middle_of_the_night)),
+        #percentage_of_time_asleep = mean(time_asleep/(time_asleep+time_awake_in_the_middle_of_the_night)),
         average_longest_sleep_segment = mean(longest_sleep_segment)/60
       )
     }
   )
   
-  sleeping_pill_usage <- summary_extraction(
-    data.frame(
-      sleep_date = seq(
-        from = min(sleep_data$sleep_date),
-        to = max(sleep_data$sleep_date),
-        by = "day"
-      )
-    ) %>% left_join(
-      annotations %>% 
-        filter(annotation == "pills") %>%
-        select(sleep_date, time),
-      by = "sleep_date"
-    ) %>% group_by(sleep_date) %>%
-      summarise(pills_used = sum(!is.na(time))) %>%
-      ungroup,
+  # sleeping_pill_usage <- summary_extraction(
+  #   data.frame(
+  #     sleep_date = seq(
+  #       from = min(sleep_data$sleep_date),
+  #       to = max(sleep_data$sleep_date),
+  #       by = "day"
+  #     )
+  #   ) %>% left_join(
+  #     annotations %>% 
+  #       filter(annotation == "pills") %>%
+  #       select(sleep_date, time),
+  #     by = "sleep_date"
+  #   ) %>% group_by(sleep_date) %>%
+  #     summarise(pills_used = sum(!is.na(time))) %>%
+  #     ungroup,
+  #   function(df){
+  #     df %>% summarise(
+  #       average_pills_used = mean(pills_used)
+  #     )
+  #   }
+  # )
+  
+  
+  sleep_efficiency_summary <- summary_extraction(
+    sleep_efficiency,
     function(df){
-      df %>% summarise(
-        average_pills_used = mean(pills_used)
-      )
-    }
+        df %>% summarise(
+          average_sleep_efficiency = mean(sleep_efficiency)
+        )
+      }
   )
+  
   
   sleep_ratings %>%
     left_join(sleep_quality_summary, by="category") %>%
-    left_join(sleeping_pill_usage, by="category") %>%
+    left_join(sleep_efficiency_summary, by="category") %>%
     gather(variable, value, -category) %>%
     mutate(variable = gsub("_"," ", variable))
   
+}
+
+calculate_sleep_efficiency <- function(sleep_stats){
+  sleep_stats %>% 
+    select(sleep_date, variable, value) %>%
+    mutate(variable = gsub("\\s+","_", variable)) %>%
+    spread(variable, value) %>%
+    transmute(
+      sleep_date = sleep_date,
+      sleep_efficiency = time_asleep / (
+        time_asleep +
+          time_to_fall_asleep + 
+          time_awake_in_the_middle_of_the_night
+      ),
+      sleep_efficiency_n_day_avg = zoo::rollmeanr(sleep_efficiency, k=days_to_average, fill=NA)
+    )
 }
 
 #' create required data for modelling

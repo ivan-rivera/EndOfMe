@@ -15,9 +15,12 @@ target_worksheet <- "Sleep Diary"
 
 
 days_to_average <- 7  # number of days to average over (used in a number of plots)
+min_required_hours <- 6 # min required hours of sleep in order for your body
+recovery_multiplier <- 3 # every hour above min_required_hours recovers that many hours of lost sleep
 positive_rating_threshold <- 5  # this number or higher defines an okay night
 shallow_sleep_factor <- 2  # N hours of shallow sleep count for 1 our of regular sleep
 prop_for_model_validation <- 0.2  # proportion of data to retain for model validation
+desired_sleep_efficiency <- 0.9  # recommended sleep efficiency
 
 # PLOT CONFIGURATIONS ---------------------------------
 

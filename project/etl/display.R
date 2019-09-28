@@ -17,6 +17,7 @@ summary_plot <- function(sleep_collection){
     arrange(category) %$%
     category %>% gsub("^\\w.\\s","",.)
   p <- sleep_collection[["summary"]][["data"]] %>%
+    mutate(variable = as.character(variable)) %>%
     ggplot(aes(x=category, y=value)) +
     facet_wrap(~variable, nrow=2, scales="free_x") +
     geom_rect(
@@ -62,15 +63,44 @@ summary_plot <- function(sleep_collection){
     labs(x="", y="") +
     ggtitle(
       "Summary Statistics", 
-      subtitle="dashed lines represent targets or upper thresholds, shades areas also represent milestones"
+      subtitle="dashed lines represent goals"
     ) +
     scale_x_discrete(labels=category_labels) +
     scale_y_continuous(labels=facet_percent_formatter, expand=c(0,0)) +
     custom_theme +
     theme(
-      axis.text.x = element_text(angle=0)
+      axis.text.x = element_text(angle=0),
+      panel.spacing = unit(1.5, "lines")
     ) + 
     coord_flip()
+  p
+}
+
+sleeping_pill_info <- function(sleep_collection){
+  latest_sleep_date <- max(sleep_collection[["sleep"]]$sleep_date)
+  lastest_sleeping_pill_date <- sleep_collection[["sleep"]] %>% 
+    filter(!is.na(pills)) %$% 
+    max(sleep_date)
+  p <- data.frame(
+    label = sprintf(
+      "last sleeping pill consumed %s days ago", 
+      as.numeric(latest_sleep_date - lastest_sleeping_pill_date)
+    )
+  ) %>% ggplot(aes(x=1, y=1, label=label)) + 
+    geom_tile(
+      fill=custom_color_palette[["primary"]][5]
+    ) +
+    custom_theme +
+    theme_void() + 
+    theme(
+      panel.background = element_rect(fill=custom_color_palette[["primary"]][5]),
+      plot.background = element_rect(fill=custom_color_palette[["primary"]][5], color=NA)
+    ) +
+    geom_fit_text(
+      family="Source Sans Pro",
+      colour=custom_color_palette[["secondary1"]][1],
+      size=16
+    )
   p
 }
 
@@ -84,15 +114,15 @@ rating_over_time <- function(sleep_collection){
   # - add model predictions (once they become available)
   average_col <- sprintf("average over %s days", days_to_average)
   col_mappings <- c(
-    custom_color_palette[["secondary2"]][1],
-    custom_color_palette[["secondary2"]][4]
-  ) %>% 
-    setNames(c("daily", average_col))
-  linetype_mappings <- c("solid", "dashed") %>% setNames(c("daily", average_col))
+    custom_color_palette[["secondary2"]][2],
+    custom_color_palette[["secondary2"]][1]
+  ) %>% setNames(c("daily", average_col))
+  size_mappings <- c(0.7, 1) %>% setNames(c("daily", average_col))
+  linetype_mappings <- c("dotted", "solid") %>% setNames(c("daily", average_col))
   p <- sleep_collection[["sleep"]] %>%
     select(sleep_date, sleep_rating, sleep_rating_average) %>%
     gather(type, rating, -sleep_date) %>%
-    filter(type == "sleep_rating") %>% # removed the average line
+    #filter(type == "sleep_rating") %>% # removed the average line
     mutate(
       type = ifelse(type == "sleep_rating", "daily", sprintf("average over %s days", n_day_breaks)),
       weekend = ifelse(weekdays(sleep_date) %in% c("Saturday", "Sunday"), TRUE, FALSE)
@@ -112,22 +142,21 @@ rating_over_time <- function(sleep_collection){
     geom_point(
       aes(x=sleep_date, y=predicted_rating), 
       color=custom_color_palette[["secondary1"]][1], 
-      size=2, 
+      size=1, 
       data=sleep_collection[["sleep"]]
     ) +
     geom_line(
-      aes(x=sleep_date, y=rating, color=type, linetype=type), 
-      alpha=0.75, 
-      size=1.5
+      aes(x=sleep_date, y=rating, color=type, size=type, linetype=type), 
+      alpha=0.9, 
     ) +
-    geom_label(
-      aes(x=sleep_date, y=sleep_rating-0.25, label=special), 
-      data=sleep_collection[["events"]], 
-      fontface="bold", 
-      size=3, 
-      color=custom_color_palette[["secondary1"]][5],
-      fill=custom_color_palette[["secondary1"]][1]
-    ) + 
+    # geom_label(
+    #   aes(x=sleep_date, y=sleep_rating-0.25, label=special), 
+    #   data=sleep_collection[["events"]], 
+    #   fontface="bold", 
+    #   size=3, 
+    #   color=custom_color_palette[["secondary1"]][5],
+    #   fill=custom_color_palette[["secondary1"]][1]
+    # ) + 
     scale_y_continuous(breaks=1:10, expand=expand_settings) +
     scale_x_date(
       labels = scales::date_format("%d/%m/%y"),
@@ -135,11 +164,12 @@ rating_over_time <- function(sleep_collection){
       expand=expand_settings
     ) +
     scale_color_manual("", values = col_mappings) +
+    scale_size_manual("", values = size_mappings) +
     scale_linetype_manual("", values = linetype_mappings) +
     labs(x="", y="") +
     ggtitle(
       "How I Subjectively Rated Each Night", 
-      subtitle = "shaded areas = weekends; dots = my guessed ratings from the night before"
+      subtitle = sprintf("shaded areas = weekends; dots = my guessed ratings from the night before; dotted line = actuals, solid line = %s day average", days_to_average)
     ) +
     custom_theme +
     theme(
@@ -195,16 +225,17 @@ hourly_plot <- function(sleep_collection){
     scale_shape_manual("", values=c("pills"=12, "toilet"=2)) +
     scale_colour_manual("", values=c(
       "asleep"=custom_color_palette[["primary"]][4], 
-      "falling asleep"=custom_color_palette[["secondary1"]][3], 
-      "awake"=custom_color_palette[["secondary2"]][3], 
+      "falling asleep"=custom_color_palette[["secondary1"]][4], 
+      "awake"=custom_color_palette[["secondary2"]][4], 
+      "out of bed"=custom_color_palette[["secondary2"]][1],
       "shallow sleep"=custom_color_palette[["primary"]][2]
     )) +
     custom_theme +
     theme(
       axis.text.x = element_text(angle=0),
-      legend.position=c(0.76, 1.05),
+      legend.position=c(0.7, 1.025),
       legend.margin = margin(t=-1, unit="cm"),
-      plot.margin = unit(c(0,1,0.1,0.2), "cm")
+      plot.margin = unit(c(0.5,1,0.1,0.2), "cm")
     ) + guides(
       color=guide_legend(nrow=1), 
       shape=guide_legend(nrow=1)
@@ -238,7 +269,7 @@ nightly_indicator_plot <- function(sleep_collection){
     theme(
       axis.text.x = element_text(angle=0)
       ) +
-    guides(FALSE)
+    guides(color=FALSE)
   p
 }
 
@@ -335,35 +366,28 @@ falling_asleep_and_staying_awake <- function(sleep_collection){
 }
 
 
+# todo: if you recover this, call it sleep_debt
 damage_plot <- function(sleep_collection){
-  p <- sleep_collection[["sleep"]] %>%
-    transmute(
-      sleep_date = sleep_date,
+  p <- sleep_collection[["sleep stats"]] %>% 
+    select(-n_day_average) %>%
+    filter(variable == "time asleep") %>%
+    mutate(
       date_time = as_datetime(sleep_date),
-      damage_ext = cumsum(sleep_rating - positive_rating_threshold)
-    ) %>%
-    # (function(df){
-    #   date_seq <- seq(from = min(df$sleep_date), to = max(df$sleep_date), by = "days")
-    #   expanded_df <- merge(
-    #     seq(from = min(df$sleep_date), to = max(df$sleep_date), by = "days"),
-    #     chron::chron(time = sprintf("%s:00:00", 0:23))
-    #   ) %>% 
-    #     mutate(date_time = as.POSIXct(paste(x, y))) %>% 
-    #     arrange(date_time) %>%
-    #     select(date_time)
-    #   expanded_df %>% left_join(df, by="date_time")
-    # }) %>% filter(cumsum(!is.na(sleep_date)) > 0) %>%
-    # mutate(damage_ext = zoo::na.spline(damage, na.rm=TRUE)) %>%
-    ggplot(aes(x=date_time)) +
+      value = value/60 - min_required_hours,
+      value = ifelse(value > 0, value * recovery_multiplier, value),
+      damage_ext = pmin(0, Reduce(
+        function(x,y){ifelse(x+y > 0, 0, x+y)}, 
+        value, 
+        accumulate = TRUE
+      ))
+    ) %>% ggplot(aes(x=date_time)) + 
     geom_hline(
       yintercept = 0, 
       linetype="dotted", 
       size = 0.5,
       color=custom_color_palette[["primary"]][1]
     ) + 
-    #geom_bar(aes(y=damage_ext, fill=damage_ext), stat="identity") +
     geom_line(aes(y=damage_ext, color=damage_ext), size=0.5) +
-    #geom_point(aes(y=damage), size=1.5, color="navy", na.rm=TRUE) +
     scale_fill_gradient2(
       low=good_bad_colours[["bad"]], 
       mid=good_bad_colours[["average"]], 
@@ -382,10 +406,10 @@ damage_plot <- function(sleep_collection){
       date_breaks=sprintf("%s days", n_day_breaks), 
       expand=expand_settings
     ) + 
-    labs(x="", y="") +
+    labs(x="", y="Hours of Sleep Debt") +
     ggtitle(
-      "Damage Absorbed",
-      subtitle=sprintf("cumulative sum of nightly sleep ratings minus survivable threshold (%s)", positive_rating_threshold)  
+      "Accumulated Sleep Debt",
+      subtitle=sprintf("Each night when I get less sleep than I need (%s), I accumulated sleep debt.\nEach extra hour that I get above the limit the following night counts for %s hours", min_required_hours, recovery_multiplier)  
     ) +
     custom_theme +
     theme(axis.text.x = element_text(angle=0)) +
@@ -425,6 +449,97 @@ sleep_hours <- function(sleep_collection){
   p
 }
 
+
+sleep_efficiency_plot <- function(sleep_collection){
+  p <- sleep_collection[["sleep stats"]] %>% 
+    select(sleep_date, variable, value) %>%
+    mutate(variable = gsub("\\s+","_", variable)) %>%
+    spread(variable, value) %>%
+    transmute(
+      sleep_date = sleep_date,
+      sleep_efficiency = time_asleep / (
+        time_asleep +
+          time_to_fall_asleep + 
+          time_awake_in_the_middle_of_the_night
+      ),
+      sleep_efficiency_n_day_avg = zoo::rollmeanr(sleep_efficiency, k=days_to_average, fill=NA)
+    ) %>% ggplot(aes(x=sleep_date)) +
+    geom_hline(yintercept = desired_sleep_efficiency, color=custom_color_palette[["secondary1"]][2]) +
+    geom_line(
+      aes(y=sleep_efficiency), 
+      color=custom_color_palette[["secondary2"]][4], 
+      size=1
+    ) +
+    geom_point(
+      aes(y=sleep_efficiency), 
+      color=custom_color_palette[["secondary2"]][2],
+      size=1.5
+    ) +
+    geom_line(
+      aes(y=sleep_efficiency_n_day_avg), 
+      color=custom_color_palette[["secondary2"]][1], 
+      size=0.5,
+      linetype="dotted"
+    ) +
+    scale_x_date(
+      labels = scales::date_format("%d/%m/%y"),
+      date_breaks=sprintf("%s days", n_day_breaks), 
+      expand=expand_settings
+    ) +
+    scale_y_continuous(
+      labels=scales::percent,
+      expand = c(0, 0.05),
+      limits = c(0, 1)
+    ) +
+    labs(x="", y="") +
+    ggtitle(
+      "Sleep Efficiency: Proportion of time in bed spent asleep", 
+      subtitle=sprintf("Actuals and %s day averages (dotted); horizontal line represents healthy minimum", days_to_average)
+    ) +
+    custom_theme
+  p
+}
+
+daily_alcohol_plot <- function(sleep_collection){
+  p <- sleep_collection[["sleep"]] %>%
+    select(sleep_date, alcohol_std)  %>% 
+    ggplot(aes(x=sleep_date)) +
+    geom_bar(
+      aes(y=alcohol_std), 
+      stat='identity', 
+      width=0.25,
+      fill=custom_color_palette[["primary"]][2]
+    ) + 
+    geom_point(
+      aes(y=alcohol_std), 
+      size=1,
+      color=custom_color_palette[["secondary2"]][2]
+    ) +
+    labs(x="", y="standard drinks") +
+    ggtitle("Daily Alcohol Consumption") +
+    scale_x_date(
+      labels = scales::date_format("%d/%m/%y"),
+      date_breaks=sprintf("%s days", n_day_breaks), 
+      expand=expand_settings
+    ) + custom_theme
+  p
+}
+
+alcohol_plot_over_range <- function(sleep_collection){
+  p_alc_averaged <- sleep_collection[["sleep"]] %>%
+    select(sleep_date, alcohol_std) %>%
+    mutate(moving_sum = zoo::rollsumr(alcohol_std, k=days_to_average, fill=0)) %>% 
+    ggplot(aes(x=sleep_date, y=moving_sum)) +
+    ggtitle(sprintf("Total Alcohol Consumption Over Last %s Days", days_to_average)) +
+    geom_line(color=custom_color_palette[["secondary2"]][2]) +
+    geom_point(color=custom_color_palette[["secondary2"]][3], alpha=0.5) +
+    labs(x="", y="standard drinks") +
+    scale_x_date(
+      labels = scales::date_format("%d/%m/%y"),
+      date_breaks=sprintf("%s days", n_day_breaks), 
+      expand=expand_settings
+    ) + custom_theme
+}
 
 
 # ANALYTICS -------------------------------------------

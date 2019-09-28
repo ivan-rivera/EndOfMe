@@ -10,6 +10,9 @@ output:
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
+# todo:
+# - compute sleep efficiency (% asleep out of total time spent in bed)
+
 # useful color links:
 # https://paletton.com/#uid=70s0u0kw0oZmFvHtFuTBLkrKnf8
 # https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/
@@ -18,6 +21,8 @@ output:
 library(flexdashboard)
 library(tidyverse)
 library(magrittr)
+library(ggrepel)
+library(ggfittext)
 library(cowplot)
 library(googlesheets)
 library(lubridate)
@@ -72,17 +77,19 @@ One one of the 2 nights I spent in the lab was quite poor and I thought that it 
 
   * Summary
     * Summary Statistics: a high level overview of the key metrics (from my point of view)
-  * A Closer Look Charts
-    * Sleep Ratings
-      - **How I Rated Each Night**: this is how I rated each night. Note that a normal person's 5/10 rating is probably my 8/10 rating
-      - **Damaged Absorbed**: I find that I can manage a single terrible night, but after a few of these nights, damage really begins to accumulate. This plot is meant to represent how I feel not just in the context of last night but in the context of recent history
+  * Night Review
     * Sleep Quality
+      - **How I Subjectively Rated Each Night**: this is how I rated each night. Note that a normal person's 5/10 rating is probably my 8/10 rating
       - **How Much Sleep I'm Getting**: This plot attempts to quantify how many hours of sleep I'm actually getting, but do note that these values are very imprecise. I find that sleep ratings are a better representation of sleep quality than pure hours because not every hour of sleep is the same. I also find that getting a long uninterrupted chunk of sleep usually translates into a higher rating. Also note that some period of my sleep are classified as "shallow" -- this is when I feel like I'm not fully awake but at the same time I'm not fully out either. Shallow sleep (specifically my definition of it) is a strange phase where I feel like I'm awake, yet I don't have full control of my thought process and even more strangely, according to sleep tests that I've done, I was even going through a deep dream phase at the time I classified as "shallow sleep"
+      - **Nightly Observations**: I also take notes of a few other things such as whether or not I've been experiencing palpitations (I tend to get those every now and again), whether I feel a sense of panic (sometimes I can get nervous that I'm going to be a wreck tomorrow) and the state of my nose (I've been having trouble with my nose).
+    * Nightly Events
       - **Each Night Dissected By Hour**: This plot attempts to visualize each night by hour and reconstruct each awakening event, each bathroom visit, etc. Whenever I wake up, I would look at the clock and make a mental note of time. In the mornings I record these times in my diary.
-      - **Nightly Observations**: In addition to the hourly plot (discussed above), I also take notes of a few other things such as whether or not I've been experiencing palpitations (I tend to get those every now and again), whether I feel a sense of panic (sometimes I can get nervous that I'm going to be a wreck tomorrow) and the state of my nose (I've been having trouble with my nose).
-    * Bed Times
-      * **Times I Go To And Get Up From Bed**: this is version of the hourly plot from the previous tab, but the attention is diverted to the times I go to bed and wake up each night/day
-      * Falling Asleep And Staying Awake: A few additional stats on how much time I spend awake in the middle of the night and how long it takes me to fall asleep
+    * Efficiency
+      - **Sleep Efficiency**: I believe this metric is often used in clinical studies to determine one's quality of sleep. The most important thing about it, is that it can be influenced by me to a degree, for sleep restriction for example (as promoted by CBT for Insomnia).
+    * Sleep Debt
+      - **Sleep Debt**: In a book I read "Overcoming Insomnia and Sleep Problems", the author mentioned that every night we get less sleep than we need, we accumulate "sleep debt" and our body will be looking to catch up on the lost sleep the following night. It said that for every 1 hour of lost sleep (sleep below what you need or what you are getting on average) you only need 1/3 of extra hour the following night to recover -- this plot attempts to demonstrate these dynamics.
+  * Influencing Factors:
+    * **Alcohol Consumtion**: These plots show how much alcohol I consumed daily and over last N days. The values are expressed in terms of standard drinks and are approximate.
   * Analytics:
     * **Sleep Rating vs Hours of Sleep**: as I suspected, it appears that sleep rating and hours of sleep are not that strongly correlated and this plot shows it
     * Predicting Tomorrow
@@ -92,54 +99,73 @@ One one of the 2 nights I spent in the lab was quite poor and I thought that it 
 # Summary
 
 ```{r summary, fig.width=12, fig.height=7.65}
-summary_plot(sleep_collection)
+summary_p <- summary_plot(sleep_collection)
+sleeping_pills_p <- sleeping_pill_info(sleep_collection)
+g <- plot_grid(
+  summary_p,
+  sleeping_pills_p, 
+  ncol=1, 
+  rel_heights=c(11,1)
+)
+ggdraw(g + joined_plot_theme)
 ```
 
 
-# A Closer Look
+# Night Review
 Row {.tabset}
 -----------------------------------------------------------------------
-### Sleep Ratings
+### Sleep Quality
 ```{r sleep_ratings, fig.width=12, fig.height=7.65}
 p_over_time <- rating_over_time(sleep_collection)
-p_damage <- damage_plot(sleep_collection)
-g <- plot_grid(
-  p_over_time,
-  p_damage, 
-  ncol=1, 
-  rel_heights=c(7,5), 
-  align="v"
-)
-ggdraw(g + joined_plot_theme)
-```
-
-### Sleep Quality
-```{r sleep_quality, fig.width=12, fig.height=7.65}
 p_hours_of_sleep <- hours_of_sleep(sleep_collection)
-p_hourly <- hourly_plot(sleep_collection)
-indicator_plot <- nightly_indicator_plot(sleep_collection)
 g <- plot_grid(
-  p_hours_of_sleep + theme(axis.text.x = element_blank()),
-  p_hourly + theme(axis.text.x = element_blank()),
-  indicator_plot + theme(legend.position = "none"),
+  p_over_time + theme(axis.text.x = element_blank()),
+  p_hours_of_sleep, 
   ncol=1, 
-  rel_heights=c(4,6,4), 
+  rel_heights=c(6,6), 
   align="v"
 )
 ggdraw(g + joined_plot_theme)
 ```
 
-### Bed Times
-```{r bed_times, fig.width=12, fig.height=7.65}
-p_sleep_hours <- sleep_hours(sleep_collection)
-p_extra_stats <- falling_asleep_and_staying_awake(sleep_collection)
+### Nightly Events
+```{r sleep_quality, fig.width=12, fig.height=7.65}
+indicator_plot <- nightly_indicator_plot(sleep_collection)
+p_hourly <- hourly_plot(sleep_collection)
 g <- plot_grid(
-  p_sleep_hours + theme(axis.text.x = element_blank()),
-  p_extra_stats,
+  p_hourly + theme(axis.text.x = element_blank()),
+  indicator_plot,
   ncol=1, 
-  rel_heights=c(5,7), 
+  rel_heights=c(9,3), 
   align="v"
 )
+ggdraw(g + joined_plot_theme)
+```
+
+### Sleep Debt
+```{r sleep_debt, fig.width=12, fig.height=7.65}
+damage_plot(sleep_collection)
+```
+
+### Sleep Efficiency
+```{r sleep_efficiency, fig.width=12, fig.height=7.65}
+sleep_efficiency_plot(sleep_collection)
+```
+
+# Influencing Factors
+
+```{r alcohol_consumption, fig.width=12, fig.height=7.65}
+p_daily_alcohol <- daily_alcohol_plot(sleep_collection)
+p_agg_alcohol <- alcohol_plot_over_range(sleep_collection)
+
+g <- plot_grid(
+  p_agg_alcohol + theme(axis.text.x = element_blank()),
+  p_daily_alcohol, 
+  ncol=1, 
+  rel_heights=c(6,6), 
+  align="v"
+)
+
 ggdraw(g + joined_plot_theme)
 ```
 
