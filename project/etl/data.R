@@ -31,13 +31,13 @@ process_sleep_data <- function(sleep_df){
   
   summary_limits_data <- tribble(
     ~variable, ~limit, ~lower_bound, ~upper_bound, ~shadow_limit,
-    "average sleep efficiency", desired_sleep_efficiency, 0.5, 0.75, 1,
-    "average hours asleep", min_required_hours, 3, 6, 9,
-    "average longest sleep segment", min_required_hours, 1, 3, 8,
-    "average daytime energy", 6, 3, 5, 10,
-    #"average pills used", 1, 0.25, 0.75, 1.1,
-    "average sleep rating", 7, 3, 6, 7.5, 
-    "average mins to fall asleep", 20, 30, 45, 60
+    "median sleep efficiency", desired_sleep_efficiency, 0.5, 0.75, 1,
+    "median hours asleep", min_required_hours, 3, 6, 9,
+    "median longest sleep segment", min_required_hours, 1, 3, 8,
+    "median daytime energy", 6, 3, 5, 10,
+    #"median pills used", 1, 0.25, 0.75, 1.1,
+    "median sleep rating", 7, 3, 6, 7.5, 
+    "median mins to fall asleep", 20, 30, 45, 60
     #"percentage of time asleep", 0.9, 0.5, 0.75, 1.05
   )
   
@@ -69,7 +69,8 @@ prepare_sleep_data <- function(sleep_df){
       ., colnames(.) %>% gsub("\\s+", "_", .)
     ) %>% mutate(
       sleep_date = lubridate::dmy(sleep_night),
-      sleep_rating_average = zoo::rollmeanr(sleep_rating, k=days_to_average, fill=NA)
+      sleep_rating_average = zoo::rollmeanr(sleep_rating, k=days_to_average, fill=NA),
+      asleep = coalesce(asleep, up)
     )
 }
 
@@ -190,22 +191,41 @@ compile_awakenings_data <- function(sleep_df){
 #' generate sleep stats
 get_sleep_statistics <- function(wakings_df){
   
-  main_attributes <- wakings_df %>% 
+  required_cols <- c(
+    asleep = NA_real_,
+    awake = NA_real_,
+    falling_asleep = NA_real_,
+    shallow_sleep = NA_real_,
+    out_of_bed_before_sleep = NA_real_,
+    out_of_bed = NA_real_
+  )
+  
+  main_attributes <- 
+    wakings_df %>% 
+    arrange(sleep_date, from) %>%
     mutate(
       time_gap_seconds = to-from,
-      event_type = gsub("\\s+","_", event_type)
-    ) %>% 
+      event_type = gsub("\\s+","_", event_type),
+      sleep_starts = max(ifelse(event_type == "asleep", from, -1)),
+      event_type = ifelse(
+        event_type == "out_of_bed" & 
+          from < sleep_starts, "out_of_bed_before_sleep", 
+        event_type
+        )
+    ) %>%
     select(sleep_date, event_type, time_gap_seconds) %>%
     group_by(sleep_date, event_type) %>%
     summarise_all(sum) %>%
     ungroup %>%
     spread(event_type, time_gap_seconds) %>%
     mutate_at(vars(-sleep_date), function(z) replace_na(z, 0) / 60) %>%
+    add_column(!!!required_cols[setdiff(names(required_cols), names(.))]) %>%
     transmute(
       sleep_date = sleep_date,
       time_awake_in_the_middle_of_the_night = awake + shallow_sleep/shallow_sleep_factor,
       time_asleep = asleep - shallow_sleep/shallow_sleep_factor - awake,
-      time_to_fall_asleep = falling_asleep
+      time_to_fall_asleep = falling_asleep-out_of_bed_before_sleep,
+      time_out_of_bed = coalesce(out_of_bed,0) + coalesce(out_of_bed_before_sleep,0)
     )
   
   longest_sleep_segment <- wakings_df %>%
@@ -268,8 +288,8 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficie
     sleep_data,
     function(df){
       df %>% summarise(
-        average_sleep_rating = mean(sleep_rating),
-        average_daytime_energy = mean(energy_level, na.rm=TRUE)
+        median_sleep_rating = median(sleep_rating),
+        median_daytime_energy = median(energy_level, na.rm=TRUE)
       )
     }
   )
@@ -281,10 +301,10 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficie
       spread(variable, value),
     function(df){
       df %>% summarise(
-        average_hours_asleep = mean(time_asleep)/60,
-        average_mins_to_fall_asleep = mean(time_to_fall_asleep),
+        median_hours_asleep = median(time_asleep)/60,
+        median_mins_to_fall_asleep = median(time_to_fall_asleep),
         #percentage_of_time_asleep = mean(time_asleep/(time_asleep+time_awake_in_the_middle_of_the_night)),
-        average_longest_sleep_segment = mean(longest_sleep_segment)/60
+        median_longest_sleep_segment = median(longest_sleep_segment)/60
       )
     }
   )
@@ -316,7 +336,7 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficie
     sleep_efficiency,
     function(df){
         df %>% summarise(
-          average_sleep_efficiency = mean(sleep_efficiency)
+          median_sleep_efficiency = median(sleep_efficiency)
         )
       }
   )

@@ -201,7 +201,13 @@ hourly_plot <- function(sleep_collection){
     geom_segment(
       size=main_plot_segment_size, 
       alpha=1, 
-      data=sleep_collection[["wakings"]] %>% filter(event_type!="asleep"), 
+      data=sleep_collection[["wakings"]] %>% filter(event_type=="falling asleep"), 
+      time_plot_aes
+    ) + 
+    geom_segment(
+      size=main_plot_segment_size, 
+      alpha=1, 
+      data=sleep_collection[["wakings"]] %>% filter(!event_type %in% c("asleep", "falling asleep")), 
       time_plot_aes
     ) +
     geom_point(
@@ -285,7 +291,7 @@ hours_of_sleep <- function(sleep_collection){
     na.omit() %>%
     ggplot(aes(x=sleep_date)) +
     geom_bar(aes(y=value, fill=variable), alpha=1, stat="identity", width=0.5) +
-    geom_hline(yintercept = 480, color=custom_color_palette[["secondary1"]][1]) + 
+    geom_hline(yintercept = 360, color=custom_color_palette[["secondary1"]][1]) + 
     geom_line(
       aes(y=n_day_average), 
       color=custom_color_palette[["primary"]][2], 
@@ -387,7 +393,7 @@ damage_plot <- function(sleep_collection){
       size = 0.5,
       color=custom_color_palette[["primary"]][1]
     ) + 
-    geom_line(aes(y=damage_ext, color=damage_ext), size=0.5) +
+    geom_line(aes(y=damage_ext, color=damage_ext), size=1.5) +
     scale_fill_gradient2(
       low=good_bad_colours[["bad"]], 
       mid=good_bad_colours[["average"]], 
@@ -503,25 +509,36 @@ sleep_efficiency_plot <- function(sleep_collection){
 daily_alcohol_plot <- function(sleep_collection){
   p <- sleep_collection[["sleep"]] %>%
     select(sleep_date, alcohol_std)  %>% 
-    ggplot(aes(x=sleep_date)) +
+    mutate(consumption_status = ifelse(alcohol_std > 0, "consumed", "not consumed")) %>%
+    ggplot() +
+    geom_rect(
+      aes(xmin=from, xmax=to, ymin=-Inf, ymax=Inf), 
+      fill=custom_color_palette[["primary"]][1], 
+      alpha=0.25, 
+      data=sleep_collection[["weekend boundaries"]]
+    ) +
     geom_bar(
-      aes(y=alcohol_std), 
+      aes(x=sleep_date, y=alcohol_std), 
       stat='identity', 
       width=0.25,
       fill=custom_color_palette[["primary"]][2]
     ) + 
     geom_point(
-      aes(y=alcohol_std), 
-      size=1,
-      color=custom_color_palette[["secondary2"]][2]
+      aes(x=sleep_date, y=alcohol_std, color=consumption_status), 
+      size=1
     ) +
     labs(x="", y="standard drinks") +
     ggtitle("Daily Alcohol Consumption") +
+    scale_color_manual("", values=c(
+      "consumed"=custom_color_palette[["secondary2"]][2],
+      "not consumed"=custom_color_palette[["secondary2"]][4]
+    )) +
     scale_x_date(
       labels = scales::date_format("%d/%m/%y"),
       date_breaks=sprintf("%s days", n_day_breaks), 
       expand=expand_settings
-    ) + custom_theme
+    ) + custom_theme + 
+    guides(color=FALSE)
   p
 }
 
@@ -529,16 +546,30 @@ alcohol_plot_over_range <- function(sleep_collection){
   p_alc_averaged <- sleep_collection[["sleep"]] %>%
     select(sleep_date, alcohol_std) %>%
     mutate(moving_sum = zoo::rollsumr(alcohol_std, k=days_to_average, fill=0)) %>% 
-    ggplot(aes(x=sleep_date, y=moving_sum)) +
+    ggplot() +
     ggtitle(sprintf("Total Alcohol Consumption Over Last %s Days", days_to_average)) +
-    geom_line(color=custom_color_palette[["secondary2"]][2]) +
-    geom_point(color=custom_color_palette[["secondary2"]][3], alpha=0.5) +
+    geom_rect(
+      aes(xmin=from, xmax=to, ymin=-Inf, ymax=Inf), 
+      fill=custom_color_palette[["primary"]][1], 
+      alpha=0.25, 
+      data=sleep_collection[["weekend boundaries"]]
+    ) +
+    geom_line(
+      aes(x=sleep_date, y=moving_sum), 
+      color=custom_color_palette[["secondary2"]][2]
+    ) +
+    geom_point(
+      aes(x=sleep_date, y=moving_sum), 
+      color=custom_color_palette[["secondary2"]][3], 
+      alpha=0.5
+    ) +
     labs(x="", y="standard drinks") +
     scale_x_date(
       labels = scales::date_format("%d/%m/%y"),
       date_breaks=sprintf("%s days", n_day_breaks), 
       expand=expand_settings
     ) + custom_theme
+  p_alc_averaged
 }
 
 
@@ -580,23 +611,27 @@ model_performance_plot <- function(model_results){
           response = variable,
           prediction = ifelse(response == "time_asleep_next", prediction/60, prediction),
           pred_label = sprintf("prediction for tomorrow: %s", round(prediction,2)),
-          pred_label = ifelse(response == "time_asleep_next", paste0(pred_label, " hrs"), pred_label)
         ),
       by="response"
     ) %>%
+    mutate(
+      actual = ifelse(response == "time_asleep_next", actual/60, actual),
+      predicted = ifelse(response == "time_asleep_next", predicted/60, predicted)
+      ) %>%
     group_by(response) %>% mutate(
       cor = cor(actual, predicted),
       rmse = Metrics::rmse(actual, predicted)
     ) %>% ungroup %>% mutate(
-      response = gsub("_next", "_prediction", response),
+      response = gsub("_next", "", response),
       response = gsub("_", " ", response),
+      response = gsub("time asleep", "time asleep (hrs)", response),
       response = paste0(response, sprintf(
         "\nCOR: %s, RMSE: %s\n%s", 
         scales::percent(cor), round(rmse,2), pred_label)
       )
     ) 
   p <- performance_plot_data %>% ggplot(aes(x=actual, y=predicted)) +
-    facet_wrap(~response, scales="free", nrow=1) +
+    facet_wrap(~response, nrow=1) +
     geom_point() +
     geom_point(color=custom_color_palette[["secondary2"]][1]) +
     geom_smooth(method="lm", se=FALSE, color=custom_color_palette[["secondary1"]][1]) +
@@ -606,11 +641,11 @@ model_performance_plot <- function(model_results){
       linetype="dotted", 
       color=custom_color_palette[["primary"]][1]
     ) + 
-    labs(x="Actual Ratings", y="Predicted Ratings") +
+    labs(x="Actuals", y="Predicted Values") +
     custom_theme +
     theme(axis.text.x = element_text(angle=0)) +
     ggtitle(
-      "Model Performance",
+      sprintf("Test Set Model Performance (last %s days)", nrow(performance_plot_data)/2),
       subtitle = sprintf(
         "Predictions are made for %s",
         model_results$predictions$prediction_date[1] + 1 # +1 because we are predicting _next
