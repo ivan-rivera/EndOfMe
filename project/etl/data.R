@@ -6,17 +6,25 @@
 #' Fetch data from Google Sheets
 retrieve_sleep_data <- function(){
   gs_auth() # authenticate
-  gs_title(target_spreadsheet) %>% 
+  sleep_data <- gs_title(target_spreadsheet) %>% 
     gs_read(ws=target_worksheet) %>%
     filter(!is.na(`sleep rating`))
+  condition_data <- gs_title(target_spreadsheet) %>%
+    gs_read(ws=condition_sheet)
+  list(
+    "sleep" = sleep_data,
+    "condition" = condition_data
+  )
 }
-
 
 #' Compile datasets for plotting and modelling
 #'
 #' @param sleep_df data from Google Sheets
-process_sleep_data <- function(sleep_df){
+process_sleep_data <- function(collection){
   
+  sleep_df <- collection[["sleep"]]
+  condition_data <- collection[["condition"]]
+  processed_condition_data <- process_condition_data(condition_data)
   processed_sleep_data <- prepare_sleep_data(sleep_df)
   events <- collect_events_log(processed_sleep_data)
   annotations <- collect_annotations(processed_sleep_data)
@@ -25,25 +33,29 @@ process_sleep_data <- function(sleep_df){
   wakings <- compile_awakenings_data(processed_sleep_data)
   sleep_stats <- get_sleep_statistics(wakings)
   sleep_efficiency <- calculate_sleep_efficiency(sleep_stats)
-  summary_data <- get_summary_data(processed_sleep_data, sleep_stats, annotations, sleep_efficiency)
-  model_data <- get_model_data(processed_sleep_data, sleep_stats, nightly_indicators, events)
+  summary_data <- get_summary_data(processed_sleep_data, sleep_stats, annotations, sleep_efficiency, processed_condition_data)
+  model_data <- get_model_data(processed_sleep_data, sleep_stats, nightly_indicators, events, processed_condition_data)
   model_vars <- get_model_vars(model_data)
   
   summary_limits_data <- tribble(
     ~variable, ~limit, ~lower_bound, ~upper_bound, ~shadow_limit,
-    "median sleep efficiency", desired_sleep_efficiency, 0.5, 0.75, 1,
+    "median sleep efficiency", desired_sleep_efficiency, 0.6, 0.8, 1,
     "median hours asleep", min_required_hours, 3, 6, 9,
     "median longest sleep segment", min_required_hours, 1, 3, 8,
     "median daytime energy", 6, 3, 5, 10,
     #"median pills used", 1, 0.25, 0.75, 1.1,
     "median sleep rating", 7, 3, 6, 7.5, 
-    "median mins to fall asleep", 20, 30, 45, 60
+    "median mins to fall asleep", 20, 30, 45, 60,
+    "mean mood", 5, 3, 7, 10,
+    "mean extraversion", 5, 3, 7, 10,
+    "mean health", 10, 7, 10, 10
     #"percentage of time asleep", 0.9, 0.5, 0.75, 1.05
   )
   
   list(
     "weekend boundaries" = weekend_boundaries,
     "sleep" = processed_sleep_data,
+    "condition" = processed_condition_data,
     "wakings" = wakings,
     "hourly annotations" = annotations,
     "nightly indicators" = nightly_indicators,
@@ -61,6 +73,10 @@ process_sleep_data <- function(sleep_df){
   
 }
 
+process_condition_data <- function(condition_data) {
+  condition_data %>% 
+    mutate(date = lubridate::dmy(date))
+}
 
 #' Initial preprocessing steps
 prepare_sleep_data <- function(sleep_df){
@@ -224,7 +240,7 @@ get_sleep_statistics <- function(wakings_df){
       sleep_date = sleep_date,
       time_awake_in_the_middle_of_the_night = awake + shallow_sleep/shallow_sleep_factor,
       time_asleep = asleep - shallow_sleep/shallow_sleep_factor - awake,
-      time_to_fall_asleep = falling_asleep-out_of_bed_before_sleep,
+      time_to_fall_asleep = falling_asleep, #-out_of_bed_before_sleep,
       time_out_of_bed = coalesce(out_of_bed,0) + coalesce(out_of_bed_before_sleep,0)
     )
   
@@ -282,7 +298,18 @@ get_sleep_statistics <- function(wakings_df){
 }
 
 #' Generate summary data for the main plot
-get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficiency){
+get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficiency, processed_condition_data){
+  
+  condition_summary <- summary_extraction(
+    processed_condition_data %>% mutate(sleep_date = date - days(1)),
+    function(df){
+      df %>% summarise(
+        mean_mood = mean(mood, na.rm=TRUE),
+        mean_extraversion=mean(extraversion, na.rm=TRUE),
+        mean_health=mean(health, na.rm=TRUE)
+      )
+    }
+  )
   
   sleep_ratings <- summary_extraction(
     sleep_data,
@@ -343,6 +370,7 @@ get_summary_data <- function(sleep_data, sleep_stats, annotations, sleep_efficie
   
   
   sleep_ratings %>%
+    left_join(condition_summary, by="category") %>%
     left_join(sleep_quality_summary, by="category") %>%
     left_join(sleep_efficiency_summary, by="category") %>%
     gather(variable, value, -category) %>%
@@ -367,7 +395,7 @@ calculate_sleep_efficiency <- function(sleep_stats){
 }
 
 #' create required data for modelling
-get_model_data <- function(sleep_data, sleep_stats, indicators, events){
+get_model_data <- function(sleep_data, sleep_stats, indicators, events, processed_condition_data){
   sleep_data %>%
     transmute(
       # gonna ignore sleeping pill intake for now
@@ -411,6 +439,12 @@ get_model_data <- function(sleep_data, sleep_stats, indicators, events){
         ),
       by="sleep_date"
     ) %>% 
+    left_join(
+      processed_condition_data %>% 
+        mutate(sleep_date = date - days(1)) %>%
+        select(-date, -notes),
+      by="sleep_date"
+    ) %>%
     replace(., is.na(.), 0) %>%
     mutate(
       event = replace_na(event, 0),

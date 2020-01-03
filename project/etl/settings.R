@@ -9,6 +9,7 @@
 
 target_spreadsheet <- "mydb"
 target_worksheet <- "Sleep Diary"
+condition_sheet <- "State"
 
 
 # PARAMETERS ------------------------------------------
@@ -60,7 +61,7 @@ good_bad_colours <- list(
 
 expand_settings <- c(0,0.25)
 
-main_plot_segment_size <- 3
+main_plot_segment_size <- 1.5
 
 custom_theme <- 
   ggplot2::theme_light() + 
@@ -69,8 +70,8 @@ custom_theme <-
   theme(
     text = element_text(family="Source Sans Pro"),
     axis.ticks = element_line(color = custom_color_palette[["primary"]][1]),
-    axis.text = element_text(size=11, color=custom_color_palette[["primary"]][1]),
-    #axis.text.x = element_text(angle=45),
+    axis.text = element_text(size=10, color=custom_color_palette[["primary"]][1]),
+    axis.text.x = element_text(angle=90),
     axis.title = element_text(size=14, color=custom_color_palette[["primary"]][1]),
     legend.key = element_rect(fill = "transparent", color="transparent"),
     legend.background = element_rect(fill = "transparent", color="transparent"),

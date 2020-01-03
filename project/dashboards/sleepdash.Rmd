@@ -72,6 +72,8 @@ When I first realized that I have a nasty case of insomnia that isn't going to g
 
 One one of the 2 nights I spent in the lab was quite poor and I thought that it should give the doctors something to look at. To my astonishment, the doctors concluded that there is nothing physically wrong with me and that in fact my perception of shallow sleep is rather pessimistic. While I thought that I spent a decent chunk of one night in a state of shallow sleep (to elaborate, I felt like I was just lying down with my eyes closed and I could get up at any point), the doctors pointed out that I actually passed out into deep sleep during some of that time though they did concede that I did indeed spent a long time in phase 1 (shallow sleep from a scientific point of view) yet it was not unhealthy from their point of view. And indeed I did feel reasonably well during the day after that night, so I started tracking my daytime energy levels too. I explained to the doctors that most of my nights I either stay awake in the middle of the night for far too long or I just get restless, interrupted sleep and I feel broken during the day. The doctors claimed to have seen cases like mine before and suggested that I should try to ride it out and how that it'll go away in a year or two.
 
+I'm currently working on Cognitive Behavioural Therapy for insomnia and I'm hoping that it will save me.
+
 
 ### Chart Notes
 
@@ -151,6 +153,24 @@ damage_plot(sleep_collection)
 ```{r sleep_efficiency, fig.width=12, fig.height=7.65}
 sleep_efficiency_plot(sleep_collection)
 ```
+
+# Days
+
+Row {.tabset}
+-----------------------------------------------------------------------
+
+### Daytime Energy
+
+```{r daytime_energy, fig.width=12, fig.height=7.65}
+daytime_energy_plot(sleep_collection)
+```
+
+### Condition
+
+```{r condition, fig.width=12, fig.height=7.65}
+condition_plot(sleep_collection)
+```
+
 
 # Influencing Factors
 
